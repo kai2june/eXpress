@@ -424,6 +424,7 @@ void output_results(Librarian& libs, size_t tot_counts, int n=-1) {
  * parameters.
  * @param frag_p pointer to the fragment to probabilistically assign.
  */
+/// @brief processing階段
 void process_fragment(Fragment* frag_p) {
   Fragment& frag = *frag_p;
   const Library& lib = *frag.lib();
@@ -454,6 +455,7 @@ void process_fragment(Fragment* frag_p) {
       FragHit& m = *frag.hits()[i];
       Target* t = m.target();
       
+      /// @brief 要處理targ_table又要處理的target->bundle
       bundle = lib.targ_table->merge_bundles(bundle, t->bundle());
       t->bundle(bundle);
       
@@ -469,7 +471,10 @@ void process_fragment(Fragment* frag_p) {
           locked_set.insert(neighbor);
         }
       }
+      /// @brief align_likelihood 是 Pr(l)*Pr(a)*Pr(bias)
       m.params()->align_likelihood = t->align_likelihood(m);
+
+      /// @brief 加上一點neighbor的權重
       m.params()->full_likelihood = m.params()->align_likelihood +
                                     t->sample_likelihood(first_round,
                                                          m.neighbors());
@@ -542,6 +547,8 @@ void process_fragment(Fragment* frag_p) {
       if (edit_detect && lib.mismatch_table) {
         (lib.mismatch_table)->update(m, p, lib.mass_n);
       }
+
+      /// @brief 5千~5百萬不斷更新3個model
       if (!burned_out && r < sexp(p)) {
         if (lib.mismatch_table && !edit_detect) {
           (lib.mismatch_table)->update(m, LOG_1, lib.mass_n);
@@ -586,8 +593,8 @@ void proc_thread(ParseThreadSafety* pts) {
     if (!frag) {
       break;
     }
-    process_fragment(frag);
-    pts->proc_out.push(frag);
+    process_fragment(frag); /// @brief proc_on的東西拿出來processing 
+    pts->proc_out.push(frag); /// @brief processing完畢放進proc_out等待post_processing
   }
 }
 
@@ -625,6 +632,7 @@ size_t threaded_calc_abundances(Librarian& libs) {
       // Used to signal bias update thread
       running = true;
       ParseThreadSafety pts(max((int)num_threads,10));
+      /// @brief 要把剛剛parsed的fragment放上proc_in
       boost::thread parse(&MapParser::threaded_parse, &map_parser, &pts,
                           stop_at, num_neighbors);
       vector<boost::thread*> thread_pool;
